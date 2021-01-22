@@ -1,5 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
+
+final String mediaDownload = "https://icarus-cdn.nyc3.cdn.digitaloceanspaces.com/resources/_6/7b/e2EC/D9C94F85aca9bce1/A75e2CfBd5D7/48B53b83de64/9FB07A4b936a69f4/de6Fab25/e01a1388FC970Ac7";
 
 void main() {
   runApp(MyApp());
@@ -29,42 +37,92 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  List<AudioPlayer> probablyPlaying = List<AudioPlayer>();
 
-  void _play() {
+  Future<void> _playFile(String fromUrl) async
+  {
+    File f = File((await getApplicationDocumentsDirectory()).path + "/cache/${md5.convert(utf8.encode(fromUrl))}");
+
+    if(!f.existsSync())
+    {
+      print("Downloading $fromUrl");
+      await Dio().download(
+        fromUrl,
+        f.path,
+        deleteOnError: true,
+      );
+      print("Downloaded $fromUrl");
+      print("Saved to ${f.path}");
+    }
+
+    else
+    {
+      print("Using cached copy ${f.path}");
+    }
+
     AudioPlayer p = AudioPlayer();
-    p.setUrl("https://icarus-cdn.nyc3.cdn.digitaloceanspaces.com/resources/_6/7b/e2EC/D9C94F85aca9bce1/A75e2CfBd5D7/48B53b83de64/9FB07A4b936a69f4/de6Fab25/e01a1388FC970Ac7").then((value) =>
-     p.load().then((value) => 
-     p.play().then((value) =>
-     p.stop().then((value) => 
-     p.dispose()))));
+    probablyPlaying.add(p);
+    print("-> Set File Path ${f.path}");
+    await p.setFilePath(f.path);
+    print("-> load");
+    await p.load();
+    print("-> play");
+    await p.play();
+    print("-> stop");
+    await p.stop();
+    print("-> dispose");
+    await p.dispose();
+  }
+
+  Future<void> _playURL(String url) async
+  {
+    AudioPlayer p = AudioPlayer();
+    probablyPlaying.add(p);
+    print("-> Set URL $url");
+    await p.setUrl(url);
+    print("-> load");
+    await p.load();
+    print("-> play");
+    await p.play();
+    print("-> stop");
+    await p.stop();
+    print("-> dispose");
+    await p.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-  
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.stop),
+            onPressed: () {
+              probablyPlaying.forEach((element) => element.stop().then((value) => element.dispose()));
+              probablyPlaying.clear();
+            },
+          )
+        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+      body: ListView(
+          children: [
+            ListTile(
+              title: Text("Test URL"),
+              subtitle: Text(
+              "Test URL will simply tell just_audio to play (stream) from the url",
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+              onTap: () => _playURL(mediaDownload),
             ),
+            ListTile(
+              title: Text("Test File"),
+              subtitle: Text(
+              "Test File will download the same url to a file, and play the cached file.",
+            ),
+              onTap: () => _playFile(mediaDownload),
+            )
           ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _play,
-        tooltip: 'Play',
-        child: Icon(Icons.play_arrow),
-      ), 
+        ),  
     );
   }
 }

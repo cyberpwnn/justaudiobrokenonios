@@ -5,6 +5,9 @@ version: 1.0.0+1
 environment:
   sdk: ">=2.7.0 <3.0.0"
 dependencies:
+  dio: ^3.0.10
+  crypto: ^2.1.5
+  path_provider: ^1.6.27
   just_audio: ^0.6.8
   flutter:
     sdk: flutter
